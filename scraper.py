@@ -283,7 +283,8 @@ class Codeforces100DayTracker:
 if __name__ == "__main__":    
     if len(sys.argv) > 1:
         fetch_date = datetime.datetime.strptime(sys.argv[1], '%Y-%m-%d').date()
-        tracker = Codeforces100DayTracker(fetch_date=fetch_date)
+        start_date = datetime.datetime.strptime(sys.argv[2], '%Y-%m-%d').date() if len(sys.argv) > 2 else datetime.date(2025, 9, 1)
+        tracker = Codeforces100DayTracker(fetch_date=fetch_date, start_date=start_date)
     else:
         tracker = Codeforces100DayTracker()
 
