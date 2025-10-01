@@ -25,12 +25,12 @@ Currently supports only Codeforces.
     ```
 3. Initialize a virtual environment (optional but recommended):
     ```bash
-    python -m venv .venv
+    python3 -m venv .venv
     source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
     ```
 4. Install the required packages:
     ```bash
-    pip install requests
+    .venv/bin/pip install -r requirements.txt
     ```
 
 # Arguments
@@ -48,24 +48,24 @@ Currently supports only Codeforces.
     
     - For today's data:
     ```bash
-    python scraper.py
+    .venv/bin/python3 scraper.py
     ```
     - For a specific date (format: YYYY-MM-DD):
     ```bash
-    python scraper.py YYYY-MM-DD
+    .venv/bin/python3 scraper.py YYYY-MM-DD
     ```
     Example:
     ```bash
-    python scraper.py 2025-09-28
+    .venv/bin/python3 scraper.py 2025-09-28
     ```
 
     - For a specific date with a custom start date (format: YYYY-MM-DD):
     ```bash
-    python scraper.py YYYY-MM-DD YYYY-MM-DD
+    .venv/bin/python3 scraper.py YYYY-MM-DD YYYY-MM-DD
     ```
     Example start date is September 1, 2025 and fetch date is September 28, 2025:
     ```bash
-    python scraper.py 2025-09-28 2025-09-01
+    .venv/bin/python3 scraper.py 2025-09-28 2025-09-01
     ```
 3. Check the generated CSV files for daily reports(`daily_log.csv`) and summary reports(`progress.csv`).
 
