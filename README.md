@@ -13,6 +13,7 @@ Currently supports only Codeforces.
 # Requirements
 - Python 3.x
 - requests
+- python-dotenv
 
 # Installation
 1. Clone the repository:
@@ -36,7 +37,11 @@ Currently supports only Codeforces.
 # Arguments
 - `fetch_date` (optional): The date for which to fetch data.
 
-    **Format:** YYYY-MM-DD. Defaults to today's date if not provided.
+    **Format:** YYYY-MM-DD or `prev` or `-1`. Defaults to today's date if not provided.
+        
+    - If a specific date is provided, it will fetch data for that date.
+    - If `prev` or `-1` is passed, it will fetch data for the previous day.
+
 - `start_date` (optional): The start date of the 100 days challenge.
     
     **Format:** YYYY-MM-DD. Defaults to September 1, 2025 if not provided.
@@ -68,6 +73,14 @@ Currently supports only Codeforces.
     .venv/bin/python3 scraper.py 2025-09-28 2025-09-01
     ```
 3. Check the generated CSV files for daily reports(`daily_log.csv`) and summary reports(`progress.csv`).
+
+(Optional) Discord Integration:
+
+- Set up a Discord webhook to send daily progress updates to a channel.
+- Add the webhook URL to a `.env` file in the project root:
+    ```
+    DISCORD_WEBHOOK_URL=your_webhook_url_here
+    ```
 
 
 

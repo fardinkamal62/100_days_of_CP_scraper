@@ -14,8 +14,11 @@ class Codeforces100DayTracker:
         self.progress_file = progress_file
         self.daily_log_file = daily_log_file
         self.base_url = 'https://codeforces.com/api/'
-        
-        if fetch_date:
+
+        # Handle fetch_date logic
+        if fetch_date in ['prev', -1]:
+            self.fetch_date = datetime.date.today() - datetime.timedelta(days=1)
+        elif fetch_date:
             self.fetch_date = fetch_date
         else:
             self.fetch_date = datetime.date.today()
@@ -402,7 +405,11 @@ class Codeforces100DayTracker:
 
 if __name__ == "__main__":    
     if len(sys.argv) > 1:
-        fetch_date = datetime.datetime.strptime(sys.argv[1], '%Y-%m-%d').date()
+        if sys.argv[1] in ['prev', '-1']:
+            fetch_date = 'prev'  # Pass 'prev' to trigger the logic in the constructor
+        else:
+            fetch_date = datetime.datetime.strptime(sys.argv[1], '%Y-%m-%d').date()
+        
         start_date = datetime.datetime.strptime(sys.argv[2], '%Y-%m-%d').date() if len(sys.argv) > 2 else datetime.date(2025, 9, 1)
         tracker = Codeforces100DayTracker(fetch_date=fetch_date, start_date=start_date)
     else:
