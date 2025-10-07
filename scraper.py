@@ -6,6 +6,7 @@ import os
 import time
 from collections import defaultdict
 import sys
+from dotenv import load_dotenv
 
 class Codeforces100DayTracker:
     def __init__(self, handles_file='handles.txt', progress_file='progress.csv', daily_log_file='daily_log.csv', start_date=None, fetch_date=None):
@@ -25,6 +26,8 @@ class Codeforces100DayTracker:
             self.start_date = datetime.date(2025, 9, 1)
 
         self.total_days = 100
+
+        load_dotenv()
         
     def load_handles(self):
         """Load Codeforces handles from a text file"""
@@ -204,6 +207,80 @@ class Codeforces100DayTracker:
             writer.writeheader()
             writer.writerows(updated_rows)
     
+    def send_to_discord(self, webhook_url, message):
+        """Send a message to Discord using a webhook"""
+        payload = {"content": message}
+        try:
+            response = requests.post(webhook_url, json=payload, timeout=10)
+            if response.status_code == 204:
+                print("Message sent to Discord successfully.")
+            else:
+                print(f"Failed to send message to Discord. Status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            print(f"Error sending message to Discord: {e}")
+
+    def generate_discord_message(self, day_number, total_remaining, eliminated_count, zero_elimination_streak, summary_message):
+        """Generate a Discord message based on the day's results"""
+        if eliminated_count == 0 and zero_elimination_streak > 1:
+            # Zero elimination streak message
+            return (
+                f"Alhamdulillah! Alhamdulillah! Another day, another Zero-Elimination!! :star_struck: \n\n"
+                f":rocket: Day {day_number} of **100 Days Of Problem Solving** Completed!\n\n"
+                f"**Remaining:** {total_remaining} @100 Days of CPers ⛰️ !:muscle:\n"
+                f"Shoutout to everyone! :tada:\n\n"
+                f"**{zero_elimination_streak} Day** streak of Zero-Elimination!:tada: \n"
+                f"Let's continue this Zero Elimination streak.... and crush Day {day_number + 1}! :fire:\n\n"
+                f"```{summary_message}```"
+            )
+        elif eliminated_count == 0:
+            # Zero eliminations message
+            return (
+                f":rocket: Day {day_number} of **100 Days Of Problem Solving** Completed!\n\n"
+                f"Total Remaining: {total_remaining}\n"
+                f"Eliminated: NONE!\n\n"
+                f"Keep pushing, @100 Days of CPers ⛰️ !:muscle:\n"
+                f"Shoutout to everyone who solved at least one problem today! :tada:\n\n"
+                f"Don't get discouraged by the eliminations. This journey is about learning, growing, and challenging yourself. "
+                f"Tomorrow is another opportunity to improve and excel.\n\n"
+                f"Let's crush Day {day_number + 1}! :fire:\n\n"
+                f"```{summary_message}```"
+            )
+        else:
+            # One or more eliminations message
+            return (
+                f":rocket: Day {day_number} of **100 Days Of Problem Solving** Completed!\n\n"
+                f"Total Remaining: {total_remaining}\n"
+                f"Eliminated: {eliminated_count} :pensive:\n\n"
+                f"Keep pushing, @100 Days of CPers ⛰️ !:muscle:\n"
+                f"Shoutout to everyone who solved at least one problem today! :tada:\n\n"
+                f"Don't get discouraged by the eliminations. This journey is about learning, growing, and challenging yourself. "
+                f"Tomorrow is another opportunity to improve and excel.\n\n"
+                f"Let's crush Day {day_number + 1}! :fire:\n\n"
+                f"```{summary_message}```"
+            )
+
+    def calculate_zero_elimination_streak(self):
+        """Calculate the streak of zero elimination days from the daily log"""
+        if not os.path.exists(self.daily_log_file):
+            return 0
+        
+        streak = 0
+        with open(self.daily_log_file, 'r', newline='') as f:
+            reader = csv.DictReader(f)
+            previous_day = None
+            for row in reversed(list(reader)):  # Read rows in reverse order
+                current_day = int(row['Day Number'])
+                if previous_day is not None and current_day != previous_day - 1:
+                    break  # Break if days are not consecutive
+                total_remaining = len([r for r in reader if int(r['Problems Solved']) > 0])
+                total_handles = len(set(r['Handle'] for r in reader))
+                if total_remaining == total_handles:
+                    streak += 1
+                else:
+                    break
+                previous_day = current_day
+        return streak
+
     def run(self):
         """Main method to run the tracker"""
         print("Starting 100-Day Codeforces Tracker")
@@ -243,26 +320,45 @@ class Codeforces100DayTracker:
         print("\n=== TODAY'S SUMMARY ===")
         today = self.fetch_date.strftime('%Y-%m-%d')
         day_number = self.get_current_day()
-        print(f"Date: {today} (Day {day_number}/100)")
-        print(f"{'Handle':<20} {'Today Solved':<12} {'Total Solved':<12} {'Day Streak':<10} {'Status':<10}")
-        print("-" * 65)
-        
+        summary_lines = [
+            f"Date: {today} (Day {day_number}/100)",
+            f"{'Handle':<20} {'Today Solved':<12} {'Total Solved':<12} {'Day Streak':<10} {'Status':<10}",
+            "-" * 65
+        ]
         for handle in handles:
             if handle in existing_data:
                 data = existing_data[handle]
                 status = "✅" if int(data['Today Solved']) > 0 else "❌"
-                print(f"{handle:<20} {data['Today Solved']:<12} {data['Total Solved']:<12} {data['Day Streak']:<10} {status:<10}")
+                summary_lines.append(
+                    f"{handle:<20} {data['Today Solved']:<12} {data['Total Solved']:<12} {data['Day Streak']:<10} {status:<10}"
+                )
             else:
-                print(f"{handle:<20} {'0':<12} {'0':<12} {'0':<10} ❌")
+                summary_lines.append(f"{handle:<20} {'0':<12} {'0':<12} {'0':<10} ❌")
         
+        summary_message = "\n".join(summary_lines)
+        print(summary_message)
 
-        while True:
-            choice = input("\nDo you want to save these changes? (y/n): ").lower()
-            if choice in ['y', 'yes']:
-                print("Saving progress data...")
+        # Calculate eliminations and zero elimination streak
+        total_remaining = len([handle for handle in handles if int(existing_data.get(handle, {}).get('Today Solved', 0)) > 0])
+        eliminated_count = len(handles) - total_remaining
+        zero_elimination_streak = self.calculate_zero_elimination_streak()
+
+        # Generate and send the Discord message
+        webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+        if webhook_url:
+            discord_message = self.generate_discord_message(
+                day_number=self.get_current_day(),
+                total_remaining=total_remaining,
+                eliminated_count=eliminated_count,
+                zero_elimination_streak=zero_elimination_streak,
+                summary_message=summary_message
+            )
+            try:
+                self.send_to_discord(webhook_url, discord_message)
+                print("Discord message sent successfully. Saving progress data automatically...")
                 self.save_progress_data(updated_data)
                 
-                # Now save daily logs
+                # Save daily logs
                 for update in daily_log_updates:
                     self.update_daily_log(
                         update['handle'], 
@@ -270,15 +366,39 @@ class Codeforces100DayTracker:
                         update['submission_link']
                     )
                 
-                print("Done! Results saved to:")
+                print("Data saved successfully!")
                 print(f"  - Progress file: {self.progress_file}")
                 print(f"  - Daily log: {self.daily_log_file}")
-                break
-            elif choice in ['n', 'no']:
-                print("Changes discarded. No files were updated.")
-                break
-            else:
-                print("Please enter 'y' or 'n'")
+            except Exception as e:
+                print(f"Failed to send Discord message or save data: {e}")
+        else:
+            print("Discord webhook URL not set. Skipping Discord notification.")
+
+        # If webhook is not set or message fails, ask user to save manually
+        if not webhook_url:
+            while True:
+                choice = input("\nDo you want to save these changes? (y/n): ").lower()
+                if choice in ['y', 'yes']:
+                    print("Saving progress data...")
+                    self.save_progress_data(updated_data)
+                    
+                    # Now save daily logs
+                    for update in daily_log_updates:
+                        self.update_daily_log(
+                            update['handle'], 
+                            update['today_solved'], 
+                            update['submission_link']
+                        )
+                    
+                    print("Done! Results saved to:")
+                    print(f"  - Progress file: {self.progress_file}")
+                    print(f"  - Daily log: {self.daily_log_file}")
+                    break
+                elif choice in ['n', 'no']:
+                    print("Changes discarded. No files were updated.")
+                    break
+                else:
+                    print("Please enter 'y' or 'n'")
 
 if __name__ == "__main__":    
     if len(sys.argv) > 1:
